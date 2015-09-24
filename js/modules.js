@@ -81,40 +81,62 @@ linuxDash.directive('ramChart', ['server', function(server) {
     };
 }]);
 
-
-linuxDash.directive('cpuLoadChart', ['server', function(server) {
+linuxDash.directive('cpuAvgLoadChart', ['server', function(server) {
     return {
         restrict: 'E',
         scope: {},
         templateUrl: 'templates/modules/cpu-load.html',
         link: function (scope) {
-            scope.maxLoad = 100;
-            scope.minLoad = 0;
+            scope.units = '%';
+        }
+    };
+}]);
 
-            scope.loadToDisplay = function (serverResponseData) {
+linuxDash.directive('cpuUtilizationChart', ['server', function(server) {
+    return {
+        restrict: 'E',
+        scope: {},
+        templateUrl: 'templates/modules/cpu-utilization-chart.html',
+        link: function (scope) {
+            scope.min = 0;
+            scope.max = 100;
+
+            scope.displayValue = function (serverResponseData) {
                 return serverResponseData;
             };
 
-            scope.loadMetrics = [
+            scope.utilMetrics = [
                 {
-                    name: '1 Min Avg',
+                    name: 'Usage',
                     generate: function (serverResponseData) {
-                        return serverResponseData[0]['1_min_avg'] + ' %';
+                        return serverResponseData + ' %'
                     }
                 },
-                {
-                    name: '5 Min Avg',
-                    generate: function (serverResponseData) {
-                        return serverResponseData[0]['5_min_avg'] + ' %';
-                    }
-                },
-                {
-                    name: '15 Min Avg',
-                    generate: function (serverResponseData) {
-                        return serverResponseData[0]['15_min_avg'] + ' %';
-                    }
-                }
             ];
+        }
+    };
+}]);
+
+linuxDash.directive('uploadTransferRateChart', ['server', function(server) {
+    return {
+        restrict: 'E',
+        scope: {},
+        templateUrl: 'templates/modules/upload-transfer-rate.html',
+        link: function (scope) {
+            scope.delay = 2000;
+            scope.units = 'KB/s';
+        }
+    };
+}]);
+
+linuxDash.directive('downloadTransferRateChart', ['server', function(server) {
+    return {
+        restrict: 'E',
+        scope: {},
+        templateUrl: 'templates/modules/download-transfer-rate.html',
+        link: function (scope) {
+            scope.delay = 2000;
+            scope.units = 'KB/s';
         }
     };
 }]);
@@ -200,6 +222,10 @@ var simpleTableModules = [
     { 
         name: 'scheduledCrons', 
         template: '<table-data heading="Scheduled Cron Jobs" module-name="scheduled_crons"></table-data>' 
+    },
+    { 
+        name: 'cronHistory', 
+        template: '<table-data heading="Cron Job History" module-name="cron_history"></table-data>' 
     },
 ];
 

@@ -12,7 +12,7 @@ A simple, low-overhead web dashboard for GNU / Linux. (~1MB)
 * A beautiful, simple web-based dashboard for monitoring a linux server
 * Only ~1MB on disk! *(.git removed)*
 * Live graphs, refresh-able widgets, and a growing # of supported modules
-* Drop-in installation for PHP (Apache, NGINX), Node.js, and Go 
+* Drop-in installation for PHP, Node.js, Python, and Go 
 
 ## Installation
 
@@ -73,10 +73,8 @@ To build a binary, run `go build && ./server -h`. See [@tehbilly](https://github
   - [ ] for PHP, NodeJS, & Go
 - [ ] "Quick Guide to Contributing" Wiki page
 - Add project to package managers
-  - [x] npm
-  - [x] composer
   - [ ] aur
-  - [ ] apt
+  - [ ] apt (ubuntu)
 - [x] Bonus: 
   - [x] multiple server side languages supported
   - [ ] use websockets in PHP & NodeJS

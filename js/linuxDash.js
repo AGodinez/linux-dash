@@ -103,7 +103,13 @@ linuxDash.directive('loader', function() {
     scope: {
         width: '@'
     },
-    template: '<div class="loader"></div>'
+    template: '<div class="spinner">' +
+                  ' <div class="rect1"></div>' +
+                  ' <div class="rect2"></div>' +
+                  ' <div class="rect3"></div>' +
+                  ' <div class="rect4"></div>' +
+                  ' <div class="rect5"></div>' +
+                '</div>'
   }; 
 });
 
@@ -263,11 +269,18 @@ linuxDash.directive('lineChartPlugin', ['$interval', '$compile', 'server', funct
         maxValue: '=',
         minValue: '=',
         getDisplayValue: '=',
-        metrics: '='
+        metrics: '=',
+	color: '@'
     },
     templateUrl: 'templates/app/line-chart-plugin.html',
     link: function (scope, element) {
         
+	if (!scope.color) {
+		scope.color = '0, 255, 0';
+	}
+	var series;
+
+
         // smoothieJS - Create new chart
         var chart = new SmoothieChart({
             borderVisible:false,
@@ -292,7 +305,7 @@ linuxDash.directive('lineChartPlugin', ['$interval', '$compile', 'server', funct
         // smoothieJS - set up canvas element for chart
         canvas = element.find('canvas')[0],
         series = new TimeSeries();
-        chart.addTimeSeries(series, { strokeStyle: 'rgba(0, 255, 0, 1)', fillStyle: 'rgba(0, 255, 0, 0.2)', lineWidth: 2 });
+        chart.addTimeSeries(series, { strokeStyle: 'rgba(' + scope.color + ', 1)', fillStyle: 'rgba(' + scope.color + ', 0.2)', lineWidth: 2 });
         chart.streamTo(canvas, 1000);
         
         // update data on chart
@@ -311,8 +324,8 @@ linuxDash.directive('lineChartPlugin', ['$interval', '$compile', 'server', funct
         		    chart.seriesSet[0].options.fillStyle = 'rgba(255, 238, 0, 0.2)';
         		}
         		else {
-        		    chart.seriesSet[0].options.strokeStyle = 'rgba(0, 255, 0, 1)';
-        		    chart.seriesSet[0].options.fillStyle = 'rgba(0, 255, 0, 0.2)';
+        		    chart.seriesSet[0].options.strokeStyle = 'rgba(' + scope.color + ', 1)';
+        		    chart.seriesSet[0].options.fillStyle = 'rgba(' + scope.color + ', 0.2)';
         		}
 
                 // update chart with this response
@@ -344,10 +357,9 @@ linuxDash.directive('multiLineChartPlugin', ['$interval', '$compile', 'server', 
         heading: '@',
         moduleName: '@',
         refreshRate: '=',
-        maxValue: '=',
-        minValue: '=',
         getDisplayValue: '=',
-        metrics: '='
+        units: '=',
+        delay: '='
     },
     templateUrl: 'templates/app/multi-line-chart-plugin.html',
     link: function (scope, element) {
@@ -367,8 +379,8 @@ linuxDash.directive('multiLineChartPlugin', ['$interval', '$compile', 'server', 
                 precision:0, 
                 fillStyle:'#0f0e0e'
             },
-            maxValue: parseInt(scope.maxValue),
-            minValue: parseInt(scope.minValue),
+            maxValue: 100,
+            minValue: 0,
             horizontalLines: [{ value: 1, color: '#ecc', lineWidth: 1 }]
         });
 
@@ -382,45 +394,54 @@ linuxDash.directive('multiLineChartPlugin', ['$interval', '$compile', 'server', 
         // smoothieJS - set up canvas element for chart
         var canvas = element.find('canvas')[0];
         var seriesArray = [];
+        scope.metricsArray = [];
 
         // get the data once to set up # of lines on chart
         server.get(scope.moduleName, function (serverResponseData) {
 
-            var numberOfLines = Object.keys(serverResponseData[0]).length;
+            var numberOfLines = Object.keys(serverResponseData).length;
 
             for (var x=0; x < numberOfLines; x++) {
+                var keyForThisLine = Object.keys(serverResponseData)[x];
+
                 seriesArray[x] = new TimeSeries();
                 chart.addTimeSeries(seriesArray[x], seriesOptions[x]);
-                scope.metrics[x].color = seriesOptions[x].strokeStyle;
+                scope.metricsArray[x] = {
+                    name: keyForThisLine,
+                    color: seriesOptions[x].strokeStyle,
+                };
             }
 
         });
 
-        chart.streamTo(canvas, 1000);
+        var delay = 1000;
+
+        if(angular.isDefined(scope.delay))
+            delay = scope.delay;
+
+        chart.streamTo(canvas, delay);
         
         // update data on chart
         scope.getData = function () {
             server.get(scope.moduleName, function (serverResponseData) {
                 scope.lastGet = new Date().getTime();
                 
-                var keyCount = 0;
-                var maxAvg = 0;
+                var keyCount    = 0;
+                var maxAvg      = 100;
 
                 // update chart with current response
-                for(var key in serverResponseData[0]) {
-                    seriesArray[keyCount].append(scope.lastGet, scope.getDisplayValue(serverResponseData[0][key]));
+                for(var key in serverResponseData) {
+                    seriesArray[keyCount].append(scope.lastGet, serverResponseData[key]);
                     keyCount++;
-                    maxAvg = Math.max(maxAvg, serverResponseData[0][key]);
+                    maxAvg = Math.max(maxAvg, serverResponseData[key]);
                 }
 
-
                 // update the metrics for this chart
-                scope.metrics.forEach(function (metricObj) {
-                    metricObj.data = metricObj.generate(serverResponseData) ;
+                scope.metricsArray.forEach(function (metricObj) {
+                    // metricObj.data = metricObj.generate(serverResponseData) ;
+                    metricObj.data = serverResponseData[metricObj.name].toString() + ' ' + scope.units;
                 });
 
-                // define a minimum average of one
-                maxAvg = Math.max(maxAvg, 1);
                 // round up the average and set the maximum scale
                 var len = parseInt(Math.log10(maxAvg));
                 var div = Math.pow(10, len);
@@ -428,7 +449,8 @@ linuxDash.directive('multiLineChartPlugin', ['$interval', '$compile', 'server', 
             });
         };
 
-        $interval(scope.getData, scope.refreshRate);
+        var refreshRate = (angular.isDefined(scope.refreshRate))? scope.refreshRate: 1000;
+        $interval(scope.getData, refreshRate);
     }
   };
 }]);
@@ -440,11 +462,6 @@ linuxDash.directive('plugin', function() {
     return {
         restrict: 'E',
         transclude: true,
-        // scope: {
-        //     heading: '@',
-        //     lastUpdated: '=',
-        //     onRefresh: '&',
-        // },
         templateUrl: 'templates/app/base-plugin.html'
     }
 });
@@ -489,6 +506,9 @@ linuxDash.directive('themeSwitcher',['$location', function($location) {
             },
             {
                 name: 'fall',
+            },
+            {
+                name: 'old',
             },
         ];
 
